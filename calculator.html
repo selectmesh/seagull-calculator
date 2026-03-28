@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Seagull Power — حاسبة الطاقة الشمسية</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0014;
+    --bg-card: #130826;
+    --bg-card2: #1a0e30;
+    --purple: #7c3aed;
+    --purple-glow: #a855f7;
+    --purple-dim: rgba(124,58,237,0.15);
+    --orange: #f97316;
+    --orange-glow: #fb923c;
+    --orange-dim: rgba(249,115,22,0.12);
+    --text: #f0e6ff;
+    --text-dim: rgba(240,230,255,0.5);
+    --text-mid: rgba(240,230,255,0.75);
+    --success: #22c55e;
+    --border: rgba(124,58,237,0.2);
+    --radius: 16px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: 30px;
+  }
+
+  /* ===== ANIMATED BACKGROUND ===== */
+  .bg-effects {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .bg-orb {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3;
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+  .bg-orb.o1 { width:300px; height:300px; background:var(--purple); top:-80px; right:-60px; animation-delay:0s; }
+  .bg-orb.o2 { width:250px; height:250px; background:var(--orange); bottom:-50px; left:-80px; animation-delay:3s; opacity:0.15; }
+  .bg-orb.o3 { width:150px; height:150px; background:var(--purple-glow); top:50%; left:50%; animation-delay:5s; opacity:0.1; }
+  @keyframes orbFloat {
+    0%,100% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(30px,-20px) scale(1.1); }
+  }
+
+  .bg-grid {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 32px 20px 20px;
+  }
+  .header-logo {
+    width: 64px; height: 64px;
+    margin: 0 auto 12px;
+    position: relative;
+  }
+  .header-logo .sun {
+    width: 64px; height: 64px;
+    background: radial-gradient(circle, var(--orange) 30%, var(--orange-glow) 60%, transparent 70%);
+    border-radius: 50%;
+    animation: sunPulse 3s ease-in-out infinite;
+  }
+  @keyframes sunPulse {
+    0%,100% { box-shadow: 0 0 20px rgba(249,115,22,0.4), 0 0 60px rgba(249,115,22,0.1); transform: scale(1); }
+    50% { box-shadow: 0 0 30px rgba(249,115,22,0.6), 0 0 80px rgba(249,115,22,0.2); transform: scale(1.05); }
+  }
+  .header-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 28px; font-weight: 800; letter-spacing: 3px;
+    color: #fff;
+  }
+  .header-title span { color: var(--orange); }
+  .header-sub {
+    font-size: 13px; color: var(--text-dim); margin-top: 4px; letter-spacing: 1px;
+  }
+  .header-divider {
+    width: 60px; height: 3px; margin: 16px auto 0;
+    background: linear-gradient(90deg, var(--purple), var(--orange));
+    border-radius: 3px;
+  }
+
+  /* ===== CONTAINER ===== */
+  .container {
+    position: relative; z-index: 1;
+    max-width: 440px; margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  /* ===== FORM CARD ===== */
+  .form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .form-card::before {
+    content: ''; position: absolute; top: 0; right: 0; left: 0; height: 2px;
+    background: linear-gradient(90deg, var(--purple), var(--orange), var(--purple));
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .section-title {
+    font-size: 15px; font-weight: 700; color: var(--orange-glow);
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .icon { font-size: 20px; }
+
+  /* ===== FORM ELEMENTS ===== */
+  .field {
+    margin-bottom: 18px;
+  }
+  .field:last-child { margin-bottom: 0; }
+
+  .field-label {
+    font-size: 13px; font-weight: 600; color: var(--text-mid);
+    margin-bottom: 8px; display: block;
+  }
+
+  .field-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg-card2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    outline: none;
+    transition: all 0.3s;
+    direction: rtl;
+    -webkit-appearance: none;
+  }
+  .field-input::placeholder { color: var(--text-dim); font-weight: 400; }
+  .field-input:focus {
+    border-color: var(--purple);
+    background: rgba(124,58,237,0.08);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+  }
+
+  .field-hint {
+    font-size: 11px; color: var(--text-dim); margin-top: 6px;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ===== QUICK SELECT BUTTONS ===== */
+  .quick-btns {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .quick-btn {
+    padding: 8px 16px;
+    background: var(--purple-dim);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-mid);
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1; min-width: 70px; text-align: center;
+  }
+  .quick-btn:hover, .quick-btn:active {
+    background: rgba(124,58,237,0.25);
+    border-color: var(--purple);
+    color: #fff;
+  }
+  .quick-btn.selected {
+    background: linear-gradient(135deg, var(--purple), var(--purple-glow));
+    border-color: var(--purple-glow);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(124,58,237,0.3);
+  }
+
+  /* ===== DESIGN TYPE CARDS ===== */
+  .design-options {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .design-card {
+    padding: 14px 16px;
+    background: var(--bg-card2);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .design-card:hover, .design-card:active {
+    border-color: var(--purple);
+    background: rgba(124,58,237,0.08);
+  }
+  .design-card.selected {
+    border-color: var(--purple-glow);
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(168,85,247,0.1));
+    box-shadow: 0 0 20px rgba(124,58,237,0.15);
+  }
+  .design-card .dc-icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    background: var(--purple-dim);
+    flex-shrink: 0;
+  }
+  .design-card.selected .dc-icon {
+    background: linear-gradient(135deg, var(--purple), var(--orange));
+  }
+  .design-card .dc-title {
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .design-card .dc-desc {
+    font-size: 11px; color: var(--text-dim); margin-top: 2px;
+  }
+  .design-card .dc-check {
+    margin-right: auto; margin-left: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .design-card.selected .dc-check {
+    background: var(--purple);
+    border-color: var(--purple);
+  }
+  .design-card.selected .dc-check::after {
+    content: '✓'; color: #fff; font-size: 12px; font-weight: 700;
+  }
+
+  /* ===== CALCULATE BUTTON ===== */
+  .calc-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--purple), var(--purple-glow));
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-family: 'Cairo', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 6px 25px rgba(124,58,237,0.35);
+    position: relative;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .calc-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+  .calc-btn:hover::before { transform: translateX(100%); }
+  .calc-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(124,58,237,0.5);
+  }
+  .calc-btn:active { transform: translateY(0); }
+  .calc-btn:disabled {
+    opacity: 0.5; cursor: not-allowed; transform: none;
+    box-shadow: none;
+  }
+
+  /* ===== RESULTS ===== */
+  .results {
+    display: none;
+    animation: slideUp 0.5s ease-out;
+  }
+  .results.show { display: block; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-header {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .result-header .rh-icon { font-size: 40px; margin-bottom: 8px; }
+  .result-header .rh-title {
+    font-size: 18px; font-weight: 700; color: var(--orange-glow);
+  }
+  .result-header .rh-sub {
+    font-size: 12px; color: var(--text-dim); margin-top: 4px;
+  }
+
+  .result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    animation: slideUp 0.5s ease-out;
+  }
+  .result-card:nth-child(2) { animation-delay: 0.1s; }
+  .result-card:nth-child(3) { animation-delay: 0.2s; }
+
+  .result-card .rc-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .result-card:nth-child(1) .rc-icon { background: linear-gradient(135deg, #f97316, #fb923c); }
+  .result-card:nth-child(2) .rc-icon { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+  .result-card:nth-child(3) .rc-icon { background: linear-gradient(135deg, #22c55e, #4ade80); }
+
+  .rc-info { flex: 1; }
+  .rc-value {
+    font-size: 26px; font-weight: 900; color: #fff;
+    line-height: 1;
+  }
+  .rc-label {
+    font-size: 12px; color: var(--text-dim); margin-top: 4px;
+  }
+  .rc-detail {
+    font-size: 11px; color: var(--text-mid); margin-top: 6px;
+    background: rgba(255,255,255,0.05);
+    padding: 4px 10px; border-radius: 8px;
+    display: inline-block;
+  }
+
+  /* Summary bar */
+  .summary-bar {
+    background: linear-gradient(135deg, var(--bg-card), var(--bg-card2));
+    border: 1px solid var(--orange-dim);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .summary-bar .sb-title {
+    font-size: 13px; font-weight: 700; color: var(--orange-glow); margin-bottom: 10px;
+  }
+  .summary-stats {
+    display: flex; justify-content: space-around; gap: 8px;
+  }
+  .summary-stat .ss-val {
+    font-size: 18px; font-weight: 900; color: #fff;
+  }
+  .summary-stat .ss-lbl {
+    font-size: 10px; color: var(--text-dim); margin-top: 2px;
+  }
+
+  /* ===== ACTION BUTTONS ===== */
+  .action-btns {
+    display: flex; gap: 10px; margin-top: 8px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .action-btn:hover, .action-btn:active {
+    border-color: var(--purple);
+    background: var(--purple-dim);
+  }
+  .action-btn.primary {
+    background: linear-gradient(135deg, var(--orange), var(--orange-glow));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(249,115,22,0.3);
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .footer a { color: var(--purple-glow); text-decoration: none; }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #dc2626; color: #fff;
+    padding: 12px 24px; border-radius: 12px;
+    font-size: 13px; font-weight: 600;
+    z-index: 999; transition: transform 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Background Effects -->
+<div class="bg-effects">
+  <div class="bg-orb o1"></div>
+  <div class="bg-orb o2"></div>
+  <div class="bg-orb o3"></div>
+</div>
+<div class="bg-grid"></div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo"><div class="sun"></div></div>
+  <div class="header-title">SEAGULL <span>POWER</span></div>
+  <div class="header-sub">حاسبة منظومات الطاقة الشمسية — العراق</div>
+  <div class="header-divider"></div>
+</div>
+
+<div class="container">
+
+  <!-- FORM -->
+  <div id="formSection">
+    <!-- Section 1: Basic Input -->
+    <div class="form-card">
+      <div class="section-title"><span class="icon">⚡</span> بيانات الحمل الكهربائي</div>
+
+      <div class="field">
+        <label class="field-label">عدد الأمبيرات المطلوبة (A)</label>
+        <input class="field-input" type="number" id="inAmps" placeholder="مثال: 30" inputmode="numeric">
+        <div class="field-hint">💡 مجموع أمبير القواطع المطلوبة</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">ساعات التشغيل الليلي</label>
+        <input class="field-input" type="number" id="inNight" placeholder="مثال: 4" value="4" inputmode="numeric" min="1" max="12">
+        <div class="quick-btns">
+          <button class="quick-btn" onclick="setVal('inNight',3,this)">3h</button>
+          <button class="quick-btn selected" onclick="setVal('inNight',4,this)">4h</button>
+          <button class="quick-btn" onclick="setVal('inNight',6,this)">6h</button>
+          <button class="quick-btn" onclick="setVal('inNight',8,this)">8h</button>
+          <button class="quick-btn" onclick="setVal('inNight',10,this)">10h</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Equipment -->
+    <div class="form-card">
+      <div class="section-title"><span class="icon">🔧</span> مواصفات المعدات</div>
+
+      <div class="field">
+        <label class="field-label">قدرة اللوح الشمسي (W)</label>
+        <input class="field-input" type="number" id="inPanel" placeholder="550" value="550" inputmode="numeric">
+        <div class="quick-btns">
+          <button class="quick-btn" onclick="setVal('inPanel',400,this)">400W</button>
+          <button class="quick-btn" onclick="setVal('inPanel',450,this)">450W</button>
+          <button class="quick-btn selected" onclick="setVal('inPanel',550,this)">550W</button>
+          <button class="quick-btn" onclick="setVal('inPanel',580,this)">580W</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">قدرة الإنفرتر (W)</label>
+        <input class="field-input" type="number" id="inInv" placeholder="5000" inputmode="numeric">
+        <div class="quick-btns">
+          <button class="quick-btn" onclick="setVal('inInv',3000,this)">3kW</button>
+          <button class="quick-btn" onclick="setVal('inInv',5000,this)">5kW</button>
+          <button class="quick-btn" onclick="setVal('inInv',8000,this)">8kW</button>
+          <button class="quick-btn" onclick="setVal('inInv',10000,this)">10kW</button>
+          <button class="quick-btn" onclick="setVal('inInv',12000,this)">12kW</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Design Type -->
+    <div class="form-card">
+      <div class="section-title"><span class="icon">🏠</span> نوع التصميم — ساعات الوطني</div>
+
+      <div class="design-options">
+        <div class="design-card selected" onclick="selectDesign(this,0)">
+          <div class="dc-icon">🔌</div>
+          <div>
+            <div class="dc-title">بدون وطني</div>
+            <div class="dc-desc">أوف-غريد — اعتماد كامل على الطاقة الشمسية</div>
+          </div>
+          <div class="dc-check"></div>
+        </div>
+        <div class="design-card" onclick="selectDesign(this,6)">
+          <div class="dc-icon">⚡</div>
+          <div>
+            <div class="dc-title">6 ساعات وطني</div>
+            <div class="dc-desc">هايبرد — كهرباء وطني 6 ساعات باليوم</div>
+          </div>
+          <div class="dc-check"></div>
+        </div>
+        <div class="design-card" onclick="selectDesign(this,12)">
+          <div class="dc-icon">💡</div>
+          <div>
+            <div class="dc-title">12 ساعة وطني</div>
+            <div class="dc-desc">هايبرد — كهرباء وطني 12 ساعة باليوم</div>
+          </div>
+          <div class="dc-check"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculate Button -->
+    <button class="calc-btn" onclick="calculate()">⚡ احسب المنظومة</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="resultsSection">
+    <div class="result-header">
+      <div class="rh-icon">☀️</div>
+      <div class="rh-title">نتائج تصميم المنظومة</div>
+      <div class="rh-sub" id="resDesignType">—</div>
+    </div>
+
+    <div class="result-card">
+      <div class="rc-icon">🔆</div>
+      <div class="rc-info">
+        <div class="rc-value" id="resPanels">—</div>
+        <div class="rc-label">عدد الألواح الشمسية</div>
+        <div class="rc-detail" id="resPanelSpec">—</div>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="rc-icon">🔌</div>
+      <div class="rc-info">
+        <div class="rc-value" id="resInv">—</div>
+        <div class="rc-label">عدد الإنفرترات</div>
+        <div class="rc-detail" id="resInvSpec">—</div>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="rc-icon">🔋</div>
+      <div class="rc-info">
+        <div class="rc-value" id="resBatt">—</div>
+        <div class="rc-label">سعة البطاريات المطلوبة</div>
+        <div class="rc-detail" id="resBattSpec">—</div>
+      </div>
+    </div>
+
+    <div class="summary-bar">
+      <div class="sb-title">📊 ملخص المنظومة</div>
+      <div class="summary-stats">
+        <div class="summary-stat">
+          <div class="ss-val" id="sumLoad">—</div>
+          <div class="ss-lbl">الحمل (W)</div>
+        </div>
+        <div class="summary-stat">
+          <div class="ss-val" id="sumKWp">—</div>
+          <div class="ss-lbl">القدرة (kWp)</div>
+        </div>
+        <div class="summary-stat">
+          <div class="ss-val" id="sumBatt">—</div>
+          <div class="ss-lbl">البطاريات (Ah)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-btns">
+      <button class="action-btn" onclick="resetForm()">🔄 حساب جديد</button>
+      <button class="action-btn primary" onclick="sendToChat()">📤 إرسال النتائج</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    ⚡ Seagull Power — طاقة مستدامة للعراق ☀️
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // Telegram Web App
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor('#0a0014');
+    tg.setBackgroundColor('#0a0014');
+  }
+
+  let wataniHours = 0;
+  let lastResult = null;
+
+  // ===== Quick buttons =====
+  function setVal(inputId, val, btn) {
+    document.getElementById(inputId).value = val;
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+
+  // ===== Design type selection =====
+  function selectDesign(card, hours) {
+    document.querySelectorAll('.design-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    wataniHours = hours;
+  }
+
+  // ===== Toast =====
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ===== Calculate =====
+  function calculate() {
+    const amps = parseFloat(document.getElementById('inAmps').value);
+    const panelW = parseFloat(document.getElementById('inPanel').value);
+    const invW = parseFloat(document.getElementById('inInv').value);
+    const nightHours = parseFloat(document.getElementById('inNight').value);
+
+    if (!amps || amps <= 0) { showToast('❌ الرجاء إدخال عدد الأمبيرات'); return; }
+    if (!panelW || panelW <= 0) { showToast('❌ الرجاء إدخال قدرة اللوح'); return; }
+    if (!invW || invW <= 0) { showToast('❌ الرجاء إدخال قدرة الإنفرتر'); return; }
+    if (!nightHours || nightHours < 1) { showToast('❌ الرجاء إدخال ساعات التشغيل الليلي'); return; }
+
+    // Battery capacity
+    const battCapAh = (nightHours * amps * 220) / 0.8;
+
+    // Panels
+    const basePanels = Math.ceil((amps * 220) / panelW);
+    let numPanels;
+    if (wataniHours === 12) {
+      numPanels = basePanels;
+    } else if (wataniHours === 6) {
+      numPanels = basePanels + Math.ceil((battCapAh * 0.5 * 0.8) / (5 * panelW));
+    } else {
+      numPanels = basePanels + Math.ceil((battCapAh * 0.8) / (5 * panelW));
+    }
+
+    // Inverters
+    let loadW = wataniHours === 0 ? amps * 220 * 1.2 : amps * 220;
+    const numInv = Math.ceil(loadW / invW);
+
+    const totalKWp = (numPanels * panelW / 1000).toFixed(1);
+    const totalInvKW = (numInv * invW / 1000).toFixed(1);
+    const battAh = Math.ceil(battCapAh);
+    const wataniLabel = wataniHours === 0 ? 'بدون وطني (أوف-غريد)' : wataniHours + ' ساعة وطني (هايبرد)';
+
+    // Display results
+    document.getElementById('resDesignType').textContent = wataniLabel;
+    document.getElementById('resPanels').textContent = numPanels + ' لوح';
+    document.getElementById('resPanelSpec').textContent = panelW + 'W × ' + numPanels + ' = ' + totalKWp + ' kWp';
+    document.getElementById('resInv').textContent = numInv + ' إنفرتر';
+    document.getElementById('resInvSpec').textContent = (invW/1000).toFixed(1) + 'kW × ' + numInv + ' = ' + totalInvKW + 'kW' + (wataniHours===0?' (أمان 1.2)':'');
+    document.getElementById('resBatt').textContent = battAh + ' Ah';
+    document.getElementById('resBattSpec').textContent = nightHours + 'h × ' + amps + 'A × 220 ÷ 0.8';
+
+    document.getElementById('sumLoad').textContent = (amps * 220).toLocaleString();
+    document.getElementById('sumKWp').textContent = totalKWp;
+    document.getElementById('sumBatt').textContent = battAh.toLocaleString();
+
+    // Store for sending
+    lastResult = {
+      amps, panelW, invW, nightHours, wataniHours,
+      numPanels, numInv, battAh, totalKWp, totalInvKW, wataniLabel
+    };
+
+    // Show results, hide form
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('resultsSection').classList.add('show');
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Haptic feedback
+    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  }
+
+  // ===== Reset =====
+  function resetForm() {
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('resultsSection').classList.remove('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ===== Send results to Telegram chat =====
+  function sendToChat() {
+    if (!lastResult) return;
+    const r = lastResult;
+
+    const text =
+      '☀️ نتائج حاسبة Seagull Power\n' +
+      '━━━━━━━━━━━━━━━━━━\n' +
+      '⚡ الأمبيرات: ' + r.amps + 'A\n' +
+      '🔆 الألواح: ' + r.numPanels + ' لوح (' + r.totalKWp + ' kWp)\n' +
+      '🔌 الإنفرترات: ' + r.numInv + ' (' + r.totalInvKW + 'kW)\n' +
+      '🔋 البطاريات: ' + r.battAh + ' Ah\n' +
+      '🏠 النوع: ' + r.wataniLabel + '\n' +
+      '━━━━━━━━━━━━━━━━━━\n' +
+      '📊 الحمل: ' + (r.amps * 220) + 'W';
+
+    if (tg) {
+      tg.sendData(JSON.stringify({
+        action: 'calc_result',
+        text: text,
+        ...r
+      }));
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('✅ تم نسخ النتائج');
+      }).catch(() => {
+        showToast('✅ تم الحساب بنجاح');
+      });
+    }
+  }
+</script>
+</body>
+</html>
